@@ -7,9 +7,8 @@
 --||	@desc:	A library providing several tools to enhance OOP with Lua
 --||	@info:  Registers itself into the global namespace
 --\\
-utils = utils or {}
-elementClasses = {}
-elementIndex = {}
+local elementClasses = {}
+local elementIndex = {}
 
 -- Set DEBUG to true to enable some additional checks
 DEBUG = DEBUG or nil
@@ -275,6 +274,7 @@ function inherit(from, what)
 		outputConsole(debug.traceback())
 		return {}
 	end
+	print("inherit", from == Object, what)
 	
 	if not what then
 		local classt = setmetatable({}, { __index = _inheritIndex, __super = { from } })
@@ -293,7 +293,8 @@ function inherit(from, what)
 	return setmetatable(what, metatable)
 end
 
-local function _inheritIndex(self, key)
+function _inheritIndex(self, key)
+	print("inherit index")
 	for k, v in pairs(super(self) or {}) do
 		if v[key] then return v[key] end
 	end
@@ -371,7 +372,7 @@ function addChangeHandler(instance, key, func)
 	return setmetatable(instance, metatable)
 end
 
-local function __changeHandlerIndex(self, key)
+function __changeHandlerIndex(self, key)
 	local metatable = getmetatable(self)
 	if metatable.__changeData[key] then return metatable.__changeData[key] end
 	
@@ -389,7 +390,7 @@ local function __changeHandlerIndex(self, key)
 	)
 end
 
-local function __changeHandlerNewindex(self, key, value)
+function __changeHandlerNewindex(self, key, value)
 	local metatable = getmetatable(self)
 	if type(metatable.__changeHandler) == "table" then
 		if metatable.__changeHandler[key] then 
