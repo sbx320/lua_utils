@@ -143,7 +143,7 @@ end
 --||	@desc:	This function calls delete on the hidden source parameter to invoke the destructor
 --||			!!! Avoid calling this function manually unless you know what you're doing! !!!
 --\\
-local function __removeElementIndex()
+function __removeElementIndex()
 	delete(source)
 end
 
