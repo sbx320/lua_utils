@@ -154,7 +154,7 @@ end
 --||	@param: vararg        - Parameters passed to the destructor and derived_destructors
 --\\
 function delete(self, ...)
-	if rawget(self, "destructor") then
+	if self.destructor then --if rawget(self, "destructor") then
 		self:destructor(...)
 	end
 
@@ -274,7 +274,6 @@ function inherit(from, what)
 		outputConsole(debug.traceback())
 		return {}
 	end
-	print("inherit", from == Object, what)
 	
 	if not what then
 		local classt = setmetatable({}, { __index = _inheritIndex, __super = { from } })
@@ -294,7 +293,6 @@ function inherit(from, what)
 end
 
 function _inheritIndex(self, key)
-	print("inherit index")
 	for k, v in pairs(super(self) or {}) do
 		if v[key] then return v[key] end
 	end
