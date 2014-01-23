@@ -36,6 +36,14 @@ function new(class, ...)
 			__super = { class };
 			__newindex = class.__newindex;
 			__call = class.__call;
+			__len = class.__len;
+			__unm = class.__unm;
+			__add = class.__add;
+			__sub = class.__sub;
+			__mul = class.__mul;
+			__div = class.__div;
+			__pow = class.__pow;
+			__concat = class.__concat;
 		})
 	
 	-- Call derived constructors
@@ -89,6 +97,14 @@ function enew(element, class, ...)
 			__super = { class };
 			__newindex = class.__newindex;
 			__call = class.__call;
+			__len = class.__len;
+			__unm = class.__unm;
+			__add = class.__add;
+			__sub = class.__sub;
+			__mul = class.__mul;
+			__div = class.__div;
+			__pow = class.__pow;
+			__concat = class.__concat;
 		})
 		
 	elementIndex[element] = instance
