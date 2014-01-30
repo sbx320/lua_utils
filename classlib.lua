@@ -286,7 +286,7 @@ end
 --\\
 function inherit(from, what)
 	if not from then
-		outputDebug("Attempt to inherit a nil table value")
+		outputDebugString("Attempt to inherit a nil table value")
 		outputConsole(debug.traceback())
 		return {}
 	end
