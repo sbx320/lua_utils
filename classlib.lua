@@ -301,7 +301,7 @@ function inherit(from, what)
 	
 	local metatable = getmetatable(what) or {}
 	local oldsuper = metatable and metatable.__super or {}
-	oldsuper[#oldsuper+1] = from
+	table.insert(oldsuper, 1, from)
 	metatable.__super = oldsuper
 	metatable.__index = _inheritIndex
 	
@@ -439,7 +439,7 @@ end
 
 
 -- -- Magic happens here. -- -- 
--- Lua's lightuserdata's (which MTA uses for Elements) can have one global shared metatable. This blocks
+-- Lua's lightuserdatas (which MTA uses for Elements) can have one global shared metatable. This blocks
 -- the possibility to do debug.setmetatable(element, class), therefore we redirect all class on elements
 -- to a table. This allows full control about the metaactions on any lightuserdata.
 -- The debug.setmetatable is applied to root as it will always be an existing element. It could be applied
