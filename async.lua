@@ -1,10 +1,6 @@
--- ****************************************************************************
--- *
--- *  PROJECT:     	vRoleplay
--- *  FILE:        	shared/Async.lua
--- *  PURPOSE:     	Helper library for asyncronous data processing
--- *
--- ****************************************************************************
+-- Developer: sbx320
+-- License: MIT
+-- Github Repos: https://github.com/sbx320/lua_utils
 Async = { id = false; threads = {}}
 
 function Async.create(func)
