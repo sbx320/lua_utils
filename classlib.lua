@@ -243,12 +243,12 @@ function bind(func, ...)
 	local boundParams = {...}
 	return 
 		function(...) 
-			local params = {}
-			for k, v in ipairs(boundParams) do
-				params[#params+1] = v
-			end
-			for k, v in ipairs({...}) do
-				params[#params+1] = v
+			local params = boundParams
+			local boundParamSize = select("#", unpack(boundParams))
+			
+			local funcParams = {...}
+			for i = 1, select("#", ...) do
+				params[boundParamSize + i] = funcParams[i]
 			end
 			return func(unpack(params)) 
 		end 
