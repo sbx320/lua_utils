@@ -243,8 +243,11 @@ function bind(func, ...)
 	local boundParams = {...}
 	return 
 		function(...) 
-			local params = boundParams
+			local params = {}
 			local boundParamSize = select("#", unpack(boundParams))
+			for i = 1, boundParamSize do
+				params[i] = boundParams[i]
+			end
 			
 			local funcParams = {...}
 			for i = 1, select("#", ...) do
