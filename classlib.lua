@@ -292,7 +292,7 @@ end
 --\\
 function inherit(from, what)
 	if not from then
-		outputDebug("Attempt to inherit a nil table value")
+		outputDebugStrin("Attempt to inherit a nil table value")
 		outputConsole(debug.traceback())
 		return {}
 	end
@@ -368,7 +368,6 @@ function addChangeHandler(instance, key, func)
 	local metatable = getmetatable(instance) or {}
 	if not metatable.__changeHandler then
 		metatable.__changeHandler = {}
-		metatable.__changeData = {}
 
 		metatable.__realNewindexFunction = metatable.__newindex
 
@@ -385,8 +384,10 @@ function addChangeHandler(instance, key, func)
 	
 	if type(key) == "function" then
 		if not metatable.__changeData then
+			metatable.__changeData = {}
 			for k, v in pairs(instance) do
 				metatable.__changeData[k] = v
+				instance[k] = nil
 			end
 		end
 		func = key
@@ -457,21 +458,23 @@ end
 -- The debug.setmetatable is applied to root as it will always be an existing element. It could be applied
 -- to any other element and have the same effect
 -- Note for 1.4: add "<oop>false</oop>" into the meta
-debug.setmetatable(root,
-	{
-		__index = function(self, key)
-			if elementIndex[self] then 	
-				return elementIndex[self][key]
-			elseif elementClasses[getElementType(self)] then
-				enew(self, elementClasses[getElementType(self)])
-				return self[key]
-			end
-		end,
-		__newindex = function(self, key, value) 
-			if not elementIndex[self] then
-				enew(self, elementClasses[getElementType(self)] or {})
-			end
-			elementIndex[self][key] = value
-		end,
-	}
-)
+if type(root) == "userdata" then
+	debug.setmetatable(root,
+		{
+			__index = function(self, key)
+				if elementIndex[self] then 	
+					return elementIndex[self][key]
+				elseif elementClasses[getElementType(self)] then
+					enew(self, elementClasses[getElementType(self)])
+					return self[key]
+				end
+			end,
+			__newindex = function(self, key, value) 
+				if not elementIndex[self] then
+					enew(self, elementClasses[getElementType(self)] or {})
+				end
+				elementIndex[self][key] = value
+			end,
+		}
+	)
+end
