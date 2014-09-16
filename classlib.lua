@@ -32,6 +32,7 @@ function enew(element, class, ...)
 			__pow = class.__pow;
 			__concat = class.__concat;		
 		})
+	
 	oop.elementInfo[element] = instance
 	
 	local callDerivedConstructor;
@@ -251,11 +252,11 @@ oop.prepareClass = function(name)
 	end
 	
 	-- Store MTA's metafunctions
-	local __mtaindex = mt[name].__index
-	local __mtanewindex = mt[name].__newindex
-	local __set= mt[name].__set
+	local __mtaindex = mt.__index
+	local __mtanewindex = mt.__newindex
+	local __set= mt.__set
 	
-	mt[name].__index = function(self, key)
+	mt.__index = function(self, key)
 		if not oop.handled then
 			if not oop.elementInfo[self] then
 				enew(self, oop.elementClasses[getElementType(self)] or {})
@@ -272,7 +273,7 @@ oop.prepareClass = function(name)
 	end
 	
 	
-	mt[name].__newindex = function(self, key, value)
+	mt.__newindex = function(self, key, value)
 		if __set[key] ~= nil then
 			__mtanewindex(self, key, value)
 			return
