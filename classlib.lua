@@ -3,27 +3,63 @@
 -- Github Repos: https://github.com/sbx320/lua_utils
 
 --// classlib
---||	@type:	Shared
---||	@desc:	A library providing several tools to enhance OOP with Lua
---||	@info:  Registers itself into the global namespace
+--|| A library providing several tools to enhance OOP with MTA and Lua
 --\\
-local elementClasses = {}
-local elementIndex = {}
+SERVER = triggerServerEvent == nil
+CLIENT = not SERVER
+DEBUG = DEBUG or false
 
--- Set DEBUG to true to enable some additional checks
-DEBUG = DEBUG or nil
+function enew(element, class, ...)
+	-- DEBUG: Validate that we are not instantiating a class with pure virtual methods
+	if DEBUG then
+		for k, v in pairs(class) do
+			assert(v ~= pure_virtual, "Attempted to instanciate a class with an unimplemented pure virtual method ("..tostring(k)..")")
+		end
+	end
+	
+	local instance = setmetatable( { element = element },
+		{
+			__index = class;
+			__super = { class };
+			__newindex = class.__newindex;
+			__call = class.__call;
+			__len = class.__len;
+			__unm = class.__unm;
+			__add = class.__add;
+			__sub = class.__sub;
+			__mul = class.__mul;
+			__div = class.__div;
+			__pow = class.__pow;
+			__concat = class.__concat;		
+		})
+	oop.elementInfo[element] = instance
+	
+	local callDerivedConstructor;
+	callDerivedConstructor = function(parentClasses, instance, ...)
+		for k, v in pairs(parentClasses) do
+			if rawget(v, "virtual_constructor") then
+				rawget(v, "virtual_constructor")(instance, ...)
+			end
+			local s = super(v)
+			if s then callDerivedConstructor(s, instance, ...) end
+		end
+	end
+		
+	callDerivedConstructor(super(instance), element, ...) 
+	
+	-- Call constructor
+	if rawget(class, "constructor") then
+		rawget(class, "constructor")(element, ...)
+	end
+	element.constructor = false
+	
+	return element
+end
 
---// new(class, ...)
---||	@desc:	Creates an instance of 'class' and calls the constructor
---||			and all virtual_constructors
---||	@param:	table 'class' -	The class which should be instanciated
---||	@param: vararg        - Parameters passed to the constructor and virtual_constructors
---||	@return:table 		  - The newly created instance 
---\\
 function new(class, ...)
 	assert(type(class) == "table", "first argument provided to new is not a table")
 	
-	-- DEBUG: Validate that we are not instanciating a class with pure virtual methods
+	-- DEBUG: Validate that we are not instantiating a class with pure virtual methods
 	if DEBUG then
 		for k, v in pairs(class) do
 			assert(v ~= pure_virtual, "Attempted to instanciate a class with an unimplemented pure virtual method ("..tostring(k)..")")
@@ -43,7 +79,8 @@ function new(class, ...)
 			__mul = class.__mul;
 			__div = class.__div;
 			__pow = class.__pow;
-			__concat = class.__concat;		})
+			__concat = class.__concat;		
+		})
 	
 	-- Call derived constructors
 	local callDerivedConstructor;
@@ -65,106 +102,9 @@ function new(class, ...)
 	end
 	instance.constructor = false
 
-	-- Add a change handler for all ._changeVARIABLE methods
-	for k, v in pairs(class) do
-		if k:sub(1, 7) == "_change" then
-			addChangeHandler(instance, k:sub(8), v)
-		end
-	end
-
 	return instance
 end
 
---// enew(element, class, ...)
---||	@desc:	Makes an element an instance of 'class' and calls the constructor
---||	@param:	table 'class' -	The class which should be instanciated
---||	@param: vararg        - Parameters passed to the constructor and virtual_constructors
---||	@return:element 	  - The element passed
---\\
-function enew(element, class, ...)
-	-- DEBUG: Validate that we are not instanciating a class with pure virtual methods
-	if DEBUG then
-		for k, v in pairs(class) do
-			assert(v ~= pure_virtual, "Attempted to instanciate a class with an unimplemented pure virtual method ("..tostring(k)..")")
-		end
-	end
-	
-	local instance = setmetatable( { element = element },
-		{
-			__index = class;
-			__super = { class };
-			__newindex = class.__newindex;
-			__call = class.__call;
-			__len = class.__len;
-			__unm = class.__unm;
-			__add = class.__add;
-			__sub = class.__sub;
-			__mul = class.__mul;
-			__div = class.__div;
-			__pow = class.__pow;
-			__concat = class.__concat;		})
-		
-	elementIndex[element] = instance
-	
-	local callDerivedConstructor;
-	callDerivedConstructor = function(parentClasses, instance, ...)
-		for k, v in pairs(parentClasses) do
-			if rawget(v, "virtual_constructor") then
-				rawget(v, "virtual_constructor")(instance, ...)
-			end
-			local s = super(v)
-			if s then callDerivedConstructor(s, instance, ...) end
-		end
-	end
-		
-	callDerivedConstructor(super(instance), element, ...) 
-	
-	-- Call constructor
-	if rawget(class, "constructor") then
-		rawget(class, "constructor")(element, ...)
-	end
-	element.constructor = false
-
-	-- Add a change handler for all ._changeVARIABLE methods
-	for k, v in pairs(class) do
-		if k:sub(1, 7) == "_change" then
-			addChangeHandler(instance, k:sub(8), v)
-		end
-	end
-	
-	-- Add the destruction handler
-	addEventHandler(
-		triggerClientEvent ~= nil and 
-		"onElementDestroy" or
-		"onClientElementDestroy", element, __removeElementIndex, false, "low-999999")
-
-	return element
-end
-
---// registerElementClass(elementType, class)
---||	@desc:	Registers a class to be used upon element index operations like e.g.
---||			getPlayerFromName("sbx320"):hello() would search in the class assigned to "player"
---||	@param:	string 'elementType'- The element type the class is supposed to be assigned to
---||	@param: table 'class'       - The class which is assigned
---\\
-function registerElementClass(elementType, class)
-	elementClasses[elementType] = class
-end
-
---// __removeElementIndex()
---||	@desc:	This function calls delete on the hidden source parameter to invoke the destructor
---||			!!! Avoid calling this function manually unless you know what you're doing! !!!
---\\
-function __removeElementIndex()
-	delete(source)
-end
-
---// delete(self, ...)
---||	@desc:	Deletes an instance and calls the destructor
---||			and all virtual_destructors
---||	@param:	table 'self' -	The instance to be deleted
---||	@param: vararg        - Parameters passed to the destructor and virtual_destructors
---\\
 function delete(self, ...)
 	if self.destructor then --if rawget(self, "destructor") then
 		self:destructor(...)
@@ -184,36 +124,54 @@ function delete(self, ...)
 		end
 	end
 	callDerivedDestructor(super(self), self, ...)
-	
-	-- Cleanup
-	elementIndex[self] = nil
 end
 
---// super(self)
---||	@desc:	Gets the superclasses of an instance or class
---||	@param:	table 'self' -	The instance / class to get the parent class of
---||	@return:table<table> - The superclasses
---\\
 function super(self)
 	if isElement(self) then
-		self = elementIndex[self]
+		assert(oop.elementInfo[self], "Cannot get the superclass of this element") -- at least: not yet
+		self = oop.elementInfo[self]
 	end
 	local metatable = getmetatable(self)
 	if metatable then return metatable.__super 
-	else return {}
+	else 
+		return {}
 	end
 end
 
---// instanceof(self, class, direct = false)
---||	@desc:	Returns if 'self' is an instance of 'class'. If 'direct' is set to true it enforces 'self'
---||			to be a direct descendant of 'class' (new(self, class)). If 'direct' is set to false 
---||			(default) 'self' is allowed to be a instance with any kind of link to 'class' even with 
---||			multiple levels of inheritance or similar polymorphic connections.
---||	@param:	table 'self' 			  -	The instance to check
---||	@param:	table 'class' 			  -	The class to check
---||	@optparam:	bool 'direct' (false) -	Whether to check for direct inheritance
---||	@return:bool - the result of the check
---\\
+function inherit(from, what)
+	assert(from, "Attempt to inherit a nil table value")
+	if not what then
+		local classt = setmetatable({}, { __index = _inheritIndex, __super = { from } })
+		if from.onInherit then
+			from.onInherit(classt)
+		end
+		return classt
+	end
+	
+	local metatable = getmetatable(what) or {}
+	local oldsuper = metatable and metatable.__super or {}
+	table.insert(oldsuper, 1, from)
+	metatable.__super = oldsuper
+	metatable.__index = _inheritIndex
+	
+	-- Inherit __call
+	for k, v in ipairs(metatable.__super) do
+		if v.__call then
+			metatable.__call = v.__call
+			break
+		end
+	end
+	
+	return setmetatable(what, metatable)
+end
+
+function _inheritIndex(self, key)
+	for k, v in pairs(super(self) or {}) do
+		if v[key] then return v[key] end
+	end
+	return nil
+end
+
 function instanceof(self, class, direct)
 	for k, v in pairs(super(self)) do
 		if v == class then return true end
@@ -229,16 +187,15 @@ function instanceof(self, class, direct)
 	return check
 end
 
---// bind(func, self)
---||	@desc:	Wraps the function(...) return function(self, ...) end idiom
---||	@param:	table 'func' 			  -	The function to bind
---||	@param:	vararg ... 		 		  -	The parameters to bind
---||	@return:function - the bound function
---\\
+function pure_virtual()
+	error("Function implementation missing")
+end
+
 function bind(func, ...)
 	if not func then
 		if DEBUG then
 			outputConsole(debug.traceback())
+			outputServerLog(debug.traceback())
 		end
 		error("Bad function pointer @ bind. See console for more details")
 	end
@@ -259,12 +216,7 @@ function bind(func, ...)
 			return func(unpack(params)) 
 		end 
 end
---// load(class, ...)
---||	@desc:	Creates an instance of 'class' and call the 'load' method
---||	@param:	table 'class' -	The class which should be instanciated
---||	@param: vararg        - Parameters passed to the 'load' method
---||	@return:table 		  - The newly created instance 
---\\
+
 function load(class, ...)
 	assert(type(class) == "table", "first argument provided to load is not a table")
 	local instance = setmetatable( { },
@@ -284,197 +236,127 @@ function load(class, ...)
 	return instance
 end
 
---// inherit(from, what)
---||	@desc:	Creates a new class inheriting from 'from' or sets 'what' to inherit from 'from'
---||	@param:	table 'from' 		-	The class to inherit from
---||	@optparam:	table 'what' 	-	The class which should inherit, optional
---||	@return:table - The now inheriting class
---\\
-function inherit(from, what)
-	if not from then
-		outputDebugString("Attempt to inherit a nil table value")
-		outputConsole(debug.traceback())
-		return {}
-	end
+-- Magic to allow MTA elements to be used as data storage
+-- e.g. localPlayer.foo = 12
+oop = {}
+oop.elementInfo = setmetatable({}, { __mode = "k" })
+oop.elementClasses = {}
+
+oop.prepareClass = function(name)
+	local mt = debug.getregistry().mt[name]
 	
-	if not what then
-		local classt = setmetatable({}, { __index = _inheritIndex, __super = { from } })
-		if from.onInherit then
-			from.onInherit(classt)
-		end
-		return classt
-	end
-	
-	local metatable = getmetatable(what) or {}
-	local oldsuper = metatable and metatable.__super or {}
-	table.insert(oldsuper, 1, from)
-	metatable.__super = oldsuper
-	metatable.__index = _inheritIndex
-	
-	return setmetatable(what, metatable)
-end
-
-function _inheritIndex(self, key)
-	for k, v in pairs(super(self) or {}) do
-		if v[key] then return v[key] end
-	end
-	return nil
-end
-
---// pure_virtual()
---||	@desc:	Yields an error on call. Use like: class.memberfunction = pure_virtual to enforce 
---||			implementation in derived classes
---\\
-function pure_virtual()
-	error("Function implementation missing")
-end
-
---// getTypeName(object)
---||	@desc:   Returns the type name of the specified object (for debug purpose only)
---||	@param:  object - the object
---||	@return: The type name
---\\
-function getTypeName(object)
-	return table.find(_G, getmetatable(object).__index)
-end
-
---// Syntax 1: addChangeHandler(instance, key, func)
---||	@desc:	addChangeHandler calls 'func' whenever 'key' is changed on 'instance'
---||	@param:	table instance  - any table to watch for changes
---||	@param: string key		- the key to watch
---||	@param:	function func	- the function to call when the value of instance[key] is changed
---||							  return anything but nil to override the value. Do not attempt to
---||							  change instance[key] directly within 'func' as it will cause a 
---||							  stack overflow. Additionally: do not use rawset on the table and 
---||							  key with a changehandler unless you want to face some awkward bugs
---||
---|| 	Parameters for func: 	  function (table/element instance, any value)
---||
---|| Syntax 2: addChangeHandler(instance, func, func)
---||	@desc:	addChangeHandler calls 'func' whenever any key is changed on 'instance'
---||	@param:	table instance  - any table to watch for changes
---||	@param:	function func	- the function to call when the value of any index in instance is changed
---||							  return anything but nil to override the value. Do not attempt to
---||							  change the contents of instance directly within 'func' as it will cause a 
---||							  stack overflow. Additionally: do not use rawset on the table with a 
---||							  changehandler unless you want to face some awkward bugs
---||
---|| 	Parameters for func: 	  function (table/element instance, any key, any value)
---\\
-function addChangeHandler(instance, key, func)
-	if isElement(instance) then
-		instance = elementIndex[instance]
-	end
-	local metatable = getmetatable(instance) or {}
-	if not metatable.__changeHandler then
-		metatable.__changeHandler = {}
-
-		metatable.__realNewindexFunction = metatable.__newindex
-
-		-- This saves us from checking on each call		
-		if type(metatable.__index) == "table" then
-			metatable.__realIndexTable = metatable.__index
-		elseif type(metatable.__index) == "function" then
-			metatable.__realIndexFunction = metatable.__index
-		end
-
-		metatable.__index = __changeHandlerIndex
-		metatable.__newindex = __changeHandlerNewindex
-	end
-	
-	if type(key) == "function" then
-		if not metatable.__changeData then
-			metatable.__changeData = {}
-			for k, v in pairs(instance) do
-				metatable.__changeData[k] = v
-				instance[k] = nil
-			end
-		end
-		func = key
-		metatable.__changeHandler = func
-	else
-		metatable.__changeData[key] = rawget(instance, key)
-		metatable.__changeHandler[key] = func
-	end
-	return setmetatable(instance, metatable)
-end
-
-function __changeHandlerIndex(self, key)
-	local metatable = getmetatable(self)
-	if metatable.__changeData[key] then return metatable.__changeData[key] end
-	
-	return (
-		-- If we have a __index function use it
-		metatable.__realIndexFunction and
-			metatable.__realIndexFunction(rawget(self, "element") or self, key) or
-			
-		-- If we have a __index table use it
-		metatable.__realIndexTable and
-			metatable.__realIndexTable[key] or
-
-		-- Else rawget
-		rawget(self, key)
-	)
-end
-
-function __changeHandlerNewindex(self, key, value)
-	local metatable = getmetatable(self)
-	if type(metatable.__changeHandler) == "table" then
-		if metatable.__changeHandler[key] then 
-			local ret = metatable.__changeHandler[key](rawget(self, "element") or self, value)
-			if ret ~= nil then
-				value = ret
-			end
-			metatable.__changeData[key] = value
-			setmetatable(self, metatable)
-			return
-		end
-	elseif type(metatable.__changeHandler) == "function" then
-		local ret = metatable.__changeHandler(rawget(self, "element") or self, key, value)
-		if ret ~= nil then
-			value = ret
-		end
-		metatable.__changeData[key] = value
-		setmetatable(self, metatable)		
+	if not mt then
+		outputDebugString("No such class mt "..tostring(name))
 		return
 	end
 	
-	return (
-		-- If we have a __newindex function use it
-		metatable.__realNewindexFunction and
-			metatable.__realNewindexFunction(rawget(self, "element") or self, key, value) or
-
-		-- Else rawset
-		rawset(self, key, value)
-	)
+	-- Store MTA's metafunctions
+	local __mtaindex = mt[name].__index
+	local __mtanewindex = mt[name].__newindex
+	local __set= mt[name].__set
+	
+	mt[name].__index = function(self, key)
+		if not oop.handled then
+			if not oop.elementInfo[self] then
+				enew(self, oop.elementClasses[getElementType(self)] or {})
+			end
+			if oop.elementInfo[self][key] ~= nil  then
+				oop.handled = false
+				return oop.elementInfo[self][key]
+			end
+			oop.handled = true
+		end
+		local value = __mtaindex(self, key)
+		oop.handled = false
+		return value
+	end
+	
+	
+	mt[name].__newindex = function(self, key, value)
+		if __set[key] ~= nil then
+			__mtanewindex(self, key, value)
+			return
+		end
+		
+		if not oop.elementInfo[self] then
+			enew(self, oop.elementClasses[getElementType(self)] or {})
+		end
+		
+		oop.elementInfo[self][key] = value
+	end
 end
 
-
-
--- -- Magic happens here. -- -- 
--- Lua's lightuserdatas (which MTA uses for Elements) can have one global shared metatable. This blocks
--- the possibility to do debug.setmetatable(element, class), therefore we redirect all class on elements
--- to a table. This allows full control about the metaactions on any lightuserdata.
--- The debug.setmetatable is applied to root as it will always be an existing element. It could be applied
--- to any other element and have the same effect
--- Note for 1.4: add "<oop>false</oop>" into the meta
-if type(root) == "userdata" then
-	debug.setmetatable(root,
-		{
-			__index = function(self, key)
-				if elementIndex[self] then 	
-					return elementIndex[self][key]
-				elseif elementClasses[getElementType(self)] then
-					enew(self, elementClasses[getElementType(self)])
-					return self[key]
-				end
-			end,
-			__newindex = function(self, key, value) 
-				if not elementIndex[self] then
-					enew(self, elementClasses[getElementType(self)] or {})
-				end
-				elementIndex[self][key] = value
-			end,
-		}
-	)
+function registerElementClass(class, name) 
+	oop.elementClasses[name] = class
 end
+
+oop.initClasses = function()
+	-- this has to match 
+	--	(Server) MTA10_Server\mods\deathmatch\logic\lua\CLuaMain.cpp
+	--	(Client) MTA10\mods\shared_logic\lua\CLuaMain.cpp
+	if SERVER then	
+		oop.prepareClass("ACL")
+		oop.prepareClass("ACLGroup")
+		oop.prepareClass("Account")
+		oop.prepareClass("Ban")
+		oop.prepareClass("Connection")
+		oop.prepareClass("QueryHandle")
+		oop.prepareClass("TextDisplay")
+		oop.prepareClass("TextItem")
+	elseif CLIENT then
+		oop.prepareClass("Projectile")
+		oop.prepareClass("Sound")
+		oop.prepareClass("Sound3D")
+		oop.prepareClass("Weapon")
+		oop.prepareClass("Effect")
+		oop.prepareClass("GuiElement")
+		oop.prepareClass("GuiWindow")
+		oop.prepareClass("GuiButton")
+		oop.prepareClass("GuiEdit")
+		oop.prepareClass("GuiLabel")
+		oop.prepareClass("GuiMemo")
+		oop.prepareClass("GuiStaticImage")
+		oop.prepareClass("GuiComboBox")
+		oop.prepareClass("GuiCheckBox")
+		oop.prepareClass("GuiRadioButton")
+		oop.prepareClass("GuiScrollPane")
+		oop.prepareClass("GuiScrollBar")
+		oop.prepareClass("GuiProgressBar")
+		oop.prepareClass("GuiGridList")
+		oop.prepareClass("GuiTabPanel")
+		oop.prepareClass("GuiTab")
+		oop.prepareClass("GuiFont")
+		oop.prepareClass("EngineCOL")
+		oop.prepareClass("EngineTXD")
+		oop.prepareClass("EngineDFF")
+		oop.prepareClass("DxMaterial")
+		oop.prepareClass("DxTexture")
+		oop.prepareClass("DxFont")
+		oop.prepareClass("DxShader")
+		oop.prepareClass("DxScreenSource")
+		oop.prepareClass("DxRenderTarget")
+	end
+	
+	oop.prepareClass("Object")
+	oop.prepareClass("Ped")
+	oop.prepareClass("Pickup")
+	oop.prepareClass("Player")
+	oop.prepareClass("RadarArea")
+	oop.prepareClass("Vector2")
+	oop.prepareClass("Vector3")
+	oop.prepareClass("Vector4")
+	oop.prepareClass("Matrix")
+	oop.prepareClass("Element")
+	oop.prepareClass("Blip")
+	oop.prepareClass("ColShape")
+	oop.prepareClass("File")
+	oop.prepareClass("Marker")		
+	oop.prepareClass("Vehicle")
+	oop.prepareClass("Water")
+	oop.prepareClass("XML")
+	oop.prepareClass("Timer")
+	oop.prepareClass("Team")
+	oop.prepareClass("Weapon")
+	oop.prepareClass("Resource")
+end
+oop.initClasses()
