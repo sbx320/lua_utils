@@ -287,7 +287,7 @@ oop.prepareClass = function(name)
 	end
 end
 
-function registerElementClass(class, name) 
+function registerElementClass(name, class) 
 	oop.elementClasses[name] = class
 end
 
