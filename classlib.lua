@@ -54,6 +54,12 @@ function enew(element, class, ...)
 	end
 	element.constructor = false
 	
+	-- Add the destruction handler
+	addEventHandler(
+		triggerClientEvent ~= nil and
+		"onElementDestroy" or
+		"onClientElementDestroy", element, __removeElementIndex, false, "low-999999")
+	
 	return element
 end
 
@@ -173,6 +179,14 @@ function _inheritIndex(self, key)
 	return nil
 end
 
+---// __removeElementIndex()
+---|| @desc: This function calls delete on the hidden source parameter to invoke the destructor
+---|| !!! Avoid calling this function manually unless you know what you're doing! !!!
+---\\
+function __removeElementIndex()
+	delete(source)
+end
+
 function instanceof(self, class, direct)
 	for k, v in pairs(super(self)) do
 		if v == class then return true end
@@ -288,6 +302,8 @@ oop.prepareClass = function(name)
 end
 
 function registerElementClass(name, class) 
+	assert(type(name) == "string", "Bad argument #1 for registerElementClass")
+	assert(type(class) == "table", "Bad argument #2 for registerElementClass")
 	oop.elementClasses[name] = class
 end
 
@@ -336,6 +352,7 @@ oop.initClasses = function()
 		oop.prepareClass("DxShader")
 		oop.prepareClass("DxScreenSource")
 		oop.prepareClass("DxRenderTarget")
+		oop.prepareClass("Weapon")
 	end
 	
 	oop.prepareClass("Object")
@@ -357,7 +374,6 @@ oop.initClasses = function()
 	oop.prepareClass("XML")
 	oop.prepareClass("Timer")
 	oop.prepareClass("Team")
-	oop.prepareClass("Weapon")
 	oop.prepareClass("Resource")
 end
 oop.initClasses()
