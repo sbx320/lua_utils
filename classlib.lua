@@ -92,7 +92,7 @@ function new(class, ...)
 	-- Call derived constructors
 	local callDerivedConstructor;
 	callDerivedConstructor = function(self, instance, ...)
-		for k, v in pairs(super(self)) do
+		for k, v in pairs(self) do
 			if rawget(v, "virtual_constructor") then
 				rawget(v, "virtual_constructor")(instance, ...)
 			end
@@ -101,7 +101,7 @@ function new(class, ...)
 		end
 	end
 		
-	callDerivedConstructor(class, instance, ...) 
+	callDerivedConstructor(super(class), instance, ...) 
 	
 	-- Call constructor
 	if rawget(class, "constructor") then
@@ -203,6 +203,7 @@ function instanceof(self, class, direct)
 end
 
 function pure_virtual()
+	outputDebug(debug.traceback())
 	error("Function implementation missing")
 end
 
@@ -360,10 +361,10 @@ oop.initClasses = function()
 	oop.prepareClass("Pickup")
 	oop.prepareClass("Player")
 	oop.prepareClass("RadarArea")
-	oop.prepareClass("Vector2")
-	oop.prepareClass("Vector3")
-	oop.prepareClass("Vector4")
-	oop.prepareClass("Matrix")
+	--oop.prepareClass("Vector2")
+	--oop.prepareClass("Vector3")
+	--oop.prepareClass("Vector4")
+	--oop.prepareClass("Matrix")
 	oop.prepareClass("Element")
 	oop.prepareClass("Blip")
 	oop.prepareClass("ColShape")
