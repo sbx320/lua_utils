@@ -55,11 +55,12 @@ function enew(element, class, ...)
 	element.constructor = false
 	
 	-- Add the destruction handler
-	addEventHandler(
+	if isElement(element) then 
+		addEventHandler(
 		triggerClientEvent ~= nil and
 		"onElementDestroy" or
 		"onClientElementDestroy", element, __removeElementIndex, false, "low-999999")
-	
+	end
 	return element
 end
 
