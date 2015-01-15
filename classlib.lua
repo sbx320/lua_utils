@@ -274,7 +274,7 @@ oop.prepareClass = function(name)
 	
 	mt.__index = function(self, key)
 		if not oop.handled then
-			if not oop.elementInfo[self] then
+			if not oop.elementInfo[self] and isElement(self) then
 				enew(self, oop.elementClasses[getElementType(self)] or {})
 			end
 			if oop.elementInfo[self][key] ~= nil  then
@@ -295,7 +295,7 @@ oop.prepareClass = function(name)
 			return
 		end
 		
-		if not oop.elementInfo[self] then
+		if not oop.elementInfo[self] and isElement(self) then
 			enew(self, oop.elementClasses[getElementType(self)] or {})
 		end
 		
