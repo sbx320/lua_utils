@@ -15,5 +15,3 @@ Documentation for classlib.lua can be found here: https://github.com/sbx320/lua_
 
 ### async.lua
 Async.lua is a wrapper around coroutines which allows coroutines to be paused and resumed a lot easier. In conjunction with MTA's dbQuery and dbPoll functions asyncronous SQL queries get very easy to handle.
-
-Documentation for async.lua can be found here: https://github.com/sbx320/lua_utils/wiki/async
