@@ -20,7 +20,7 @@ function enew(element, class, ...)
 	local instance = setmetatable( { element = element },
 		{
 			__index = class;
-			__super = { class };
+			__class = class;
 			__newindex = class.__newindex;
 			__call = class.__call;
 			__len = class.__len;
@@ -41,12 +41,12 @@ function enew(element, class, ...)
 			if rawget(v, "virtual_constructor") then
 				rawget(v, "virtual_constructor")(instance, ...)
 			end
-			local s = super(v)
+			local s = superMultiple(v)
 			if s then callDerivedConstructor(s, instance, ...) end
 		end
 	end
 		
-	callDerivedConstructor(super(instance), element, ...) 
+	callDerivedConstructor(superMultiple(class), element, ...) 
 	
 	-- Call constructor
 	if rawget(class, "constructor") then
@@ -77,7 +77,7 @@ function new(class, ...)
 	local instance = setmetatable( { },
 		{
 			__index = class;
-			__super = { class };
+			__class = class;
 			__newindex = class.__newindex;
 			__call = class.__call;
 			__len = class.__len;
@@ -97,12 +97,12 @@ function new(class, ...)
 			if rawget(v, "virtual_constructor") then
 				rawget(v, "virtual_constructor")(instance, ...)
 			end
-			local s = super(v)
+			local s = superMultiple(v)
 			if s then callDerivedConstructor(s, instance, ...) end
 		end
 	end
 		
-	callDerivedConstructor(super(class), instance, ...) 
+	callDerivedConstructor(superMultiple(class), instance, ...) 
 	
 	-- Call constructor
 	if rawget(class, "constructor") then
@@ -127,23 +127,48 @@ function delete(self, ...)
 			if rawget(v, "virtual_destructor") then
 				rawget(v, "virtual_destructor")(instance, ...)
 			end
-			local s = super(v)
+			local s = superMultiple(v)
 			if s then callDerivedDestructor(s, instance, ...) end
 		end
 	end
-	callDerivedDestructor(super(self), self, ...)
+	callDerivedDestructor(superMultiple(self), self, ...)
 end
 
-function super(self)
+function superMultiple(self)
 	if isElement(self) then
 		assert(oop.elementInfo[self], "Cannot get the superclass of this element") -- at least: not yet
 		self = oop.elementInfo[self]
 	end
+	
 	local metatable = getmetatable(self)
-	if metatable then return metatable.__super 
-	else 
+	if not metatable then
 		return {}
 	end
+	
+	if metatable.__class then -- we're dealing with a class object
+		return superMultiple(metatable.__class)
+	end
+	
+	if metatable.__super then -- we're dealing with a class
+		return metatable.__super
+	end
+end
+
+function super(self)
+	return superMultiple(self)[1]
+end
+
+function classof(self)
+	if isElement(self) then
+		assert(oop.elementInfo[self], "Cannot get the class of this element") -- at least: not yet
+		self = oop.elementInfo[self]
+	end
+	
+	local metatable = getmetatable(self)
+	if metatable then
+		return metatable.__class
+	end
+	return {}
 end
 
 function inherit(from, what)
@@ -174,7 +199,7 @@ function inherit(from, what)
 end
 
 function _inheritIndex(self, key)
-	for k, v in pairs(super(self) or {}) do
+	for k, v in pairs(superMultiple(self) or {}) do
 		if v[key] then return v[key] end
 	end
 	return nil
@@ -189,16 +214,22 @@ function __removeElementIndex()
 end
 
 function instanceof(self, class, direct)
-	for k, v in pairs(super(self)) do
-		if v == class then return true end
+	if direct then
+		return classof(self) == class
 	end
 	
-	if direct then return false end
+	for k, v in pairs(superMultiple(self)) do
+		if v == class then return true end
+	end
 		
 	local check = false
 	-- Check if any of 'self's base classes is inheriting from 'class'
-	for k, v in pairs(super(self)) do
+	for k, v in pairs(superMultiple(self)) do
+		print(v)
 		check = instanceof(v, class, false)
+		if check then
+			break
+		end
 	end	
 	return check
 end
@@ -239,7 +270,7 @@ function load(class, ...)
 	local instance = setmetatable( { },
 		{
 			__index = class;
-			__super = { class };
+			__class = class;
 			__newindex = class.__newindex;
 			__call = class.__call;
 		})
