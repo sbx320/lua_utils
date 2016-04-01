@@ -42,7 +42,7 @@ function enew(element, class, ...)
 				rawget(v, "virtual_constructor")(instance, ...)
 			end
 			local s = superMultiple(v)
-			if s then callDerivedConstructor(s, instance, ...) end
+			callDerivedConstructor(s, instance, ...)
 		end
 	end
 		
@@ -98,7 +98,7 @@ function new(class, ...)
 				rawget(v, "virtual_constructor")(instance, ...)
 			end
 			local s = superMultiple(v)
-			if s then callDerivedConstructor(s, instance, ...) end
+			callDerivedConstructor(s, instance, ...)
 		end
 	end
 		
@@ -128,7 +128,7 @@ function delete(self, ...)
 				rawget(v, "virtual_destructor")(instance, ...)
 			end
 			local s = superMultiple(v)
-			if s then callDerivedDestructor(s, instance, ...) end
+			callDerivedDestructor(s, instance, ...)
 		end
 	end
 	callDerivedDestructor(superMultiple(self), self, ...)
@@ -150,7 +150,7 @@ function superMultiple(self)
 	end
 	
 	if metatable.__super then -- we're dealing with a class
-		return metatable.__super
+		return metatable.__super or {}
 	end
 end
 
@@ -199,7 +199,7 @@ function inherit(from, what)
 end
 
 function _inheritIndex(self, key)
-	for k, v in pairs(superMultiple(self) or {}) do
+	for k, v in pairs(superMultiple(self)) do
 		if v[key] then return v[key] end
 	end
 	return nil
