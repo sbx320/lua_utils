@@ -5,7 +5,7 @@ A collection of utility Lua scripts usable in conjunction with MTA San Andreas.
 
 
 ### classlib.lua
-This script helps out on the usage of classes and OOP in Lua. Additionally it allows an easily accessable per-element storage for MTA's elements similar to the following.
+This script helps out on the usage of classes and OOP in Lua. Additionally it allows an easily accessible per-element storage for MTA's elements similar to the following.
 ```lua
 local player = getPlayerFromName("sbx320");
 player.someVariableIWantToStore = "Hello World!";
