@@ -225,7 +225,6 @@ function instanceof(self, class, direct)
 	local check = false
 	-- Check if any of 'self's base classes is inheriting from 'class'
 	for k, v in pairs(superMultiple(self)) do
-		print(v)
 		check = instanceof(v, class, false)
 		if check then
 			break
